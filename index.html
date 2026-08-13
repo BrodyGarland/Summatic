@@ -41,6 +41,7 @@ button{background:none;border:none;cursor:pointer}
   font-size:clamp(28px,7.5vw,44px);letter-spacing:.1em;line-height:1}
 .wordmark i{font-style:normal;color:var(--h2)}
 .rail-link{grid-column:3;justify-self:end}
+.rail-link.left{grid-column:1;justify-self:start}
 .tagline{font-size:13.5px;color:var(--dim);text-align:center;line-height:1.5;max-width:44ch;
   margin:0 auto}
 
@@ -57,7 +58,8 @@ button{background:none;border:none;cursor:pointer}
 /* Setup */
 #s-setup{justify-content:center;align-items:center;padding:clamp(24px,6vh,60px) 0}
 .setup{width:100%;max-width:560px;display:flex;flex-direction:column;gap:clamp(26px,5vh,40px)}
-.groups{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.groups{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-items:start}
+.gcol{display:flex;flex-direction:column;gap:8px}
 .gchip{border:1px solid var(--line);border-radius:var(--r);padding:20px 12px 16px;
   text-align:center;transition:border-color .15s,background .15s,transform .15s,box-shadow .15s}
 .gchip:hover{border-color:var(--dimmer);transform:translateY(-2px);box-shadow:0 10px 24px -12px rgba(0,0,0,.5)}
@@ -67,7 +69,17 @@ button{background:none;border:none;cursor:pointer}
 .gchip[aria-pressed="true"] .glyph{color:var(--h2)}
 .gchip b{font-size:12.5px;font-weight:500;color:var(--dim);display:block}
 .gchip[aria-pressed="true"] b{color:var(--text)}
- 
+
+/* Digit-level dots — shown below/outside the chip box, only once a mode
+   is selected. Plain circles rather than a glyph so they render crisp
+   at any size instead of relying on font-specific character shapes. */
+.hash-row{display:flex;gap:8px;align-items:center;justify-content:center;padding:2px 0}
+.hash-btn{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line);
+  background:none;padding:0;box-sizing:border-box;
+  transition:transform .1s,background .1s,border-color .1s}
+.hash-btn:hover{border-color:var(--dimmer)}
+.hash-btn.active{background:var(--h2);border-color:var(--h2);transform:scale(1.2)}
+
 .timer-set{display:flex;flex-direction:column;gap:14px}
 .time-read{font-family:var(--mono);font-size:clamp(28px,7vw,40px);
   font-variant-numeric:tabular-nums;text-align:center;line-height:1}
@@ -97,12 +109,11 @@ button{background:none;border:none;cursor:pointer}
   padding-top:clamp(18px,4vh,32px)}
 .hud .clock{font-size:20px;font-variant-numeric:tabular-nums;color:var(--text)}
 .hud .clock.low{color:var(--h2)}
-.hud .tally{font-variant-numeric:tabular-nums}
-.hud .tally b{color:var(--text);font-weight:500}
-.hud .streak{font-variant-numeric:tabular-nums}
-.hud .streak b{display:inline-block;color:var(--h2);font-weight:600}
-.hud .streak.pop b{animation:streakPop .38s ease}
-@keyframes streakPop{0%{transform:scale(1)}45%{transform:scale(1.4);color:var(--h4)}100%{transform:scale(1)}}
+.hud .score{font-variant-numeric:tabular-nums;position:relative}
+.hud .score b{color:var(--h2);font-weight:600}
+.bonus-pop{position:absolute;left:100%;top:-1px;margin-left:6px;font-family:var(--mono);
+  font-size:11px;color:var(--h2);opacity:0;transition:opacity .5s ease;pointer-events:none;white-space:nowrap}
+.bonus-pop.show{opacity:1;transition:opacity .1s ease}
 .stage{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;
   gap:clamp(18px,4vh,34px);width:100%;padding:clamp(24px,7vh,64px) 0}
 .problem{font-family:var(--mono);font-size:clamp(34px,9vw,62px);letter-spacing:-.01em;
@@ -225,10 +236,17 @@ button{background:none;border:none;cursor:pointer}
   align-items:center;gap:8px 12px;letter-spacing:.05em}
 .foot-spacer{flex:1}
  
+@media (max-width:560px){
+  .rail{display:flex;flex-wrap:wrap;justify-content:center;gap:10px 14px}
+  .wordmark{order:-1;flex-basis:100%}
+  .rail-link,.rail-link.left{grid-column:auto;justify-self:auto}
+}
 @media (max-width:520px){
   .groups{grid-template-columns:1fr}
   .gchip{display:flex;align-items:center;gap:14px;text-align:left;padding:14px 16px}
   .gchip .glyph{margin-bottom:0;font-size:20px}
+  .hash-row{justify-content:flex-start;padding:2px 16px}
+  .hash-btn{width:22px;height:22px}
 }
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
@@ -239,9 +257,9 @@ button{background:none;border:none;cursor:pointer}
 <div class="app">
  
   <header class="rail">
-    <span></span>
+    <button class="rail-link left btnlink" id="btn-methods">Strategies</button>
     <button class="wordmark" id="btn-home" aria-label="Back to setup">SUMMAT<i>I</i>C</button>
-    <button class="rail-link btnlink" id="btn-methods">Strategies</button>
+    <button class="rail-link btnlink" id="btn-benchmarks">Benchmarks</button>
   </header>
 
   <section class="screen on" id="s-setup">
@@ -260,18 +278,13 @@ button{background:none;border:none;cursor:pointer}
   <section class="screen" id="s-drill">
     <div class="hud">
       <span class="clock" id="clock">2:00</span>
-      <span class="streak" id="streak-wrap">streak <b id="t-streak">0</b></span>
-      <span class="tally"><b id="t-right">0</b> right · <span id="t-wrong">0</span> missed</span>
+      <span class="score" id="score-wrap">score <b id="t-score">0</b><span class="bonus-pop" id="bonus-pop">+50</span></span>
     </div>
     <div class="stage">
       <div class="problem" id="problem">—</div>
       <input class="answer" id="answer" inputmode="decimal" autocomplete="off"
              autocorrect="off" spellcheck="false" aria-label="Your answer">
       <div class="flash" id="flash"></div>
-    </div>
-    <div class="ribbon-wrap">
-      <div class="ribbon" id="ribbon"></div>
-      <div class="ribbon-key"><span>6.0s</span><span class="ramp"></span><span>1.5s</span></div>
     </div>
   </section>
  
@@ -312,17 +325,18 @@ button{background:none;border:none;cursor:pointer}
 </div>
  
 <div class="scrim" id="scrim"></div>
-<aside class="drawer" id="drawer" aria-label="Strategies" aria-hidden="true">
+<aside class="drawer" id="drawer" aria-label="Strategies and benchmarks" aria-hidden="true">
   <div class="drawer-top">
     <div class="tabs" id="drawer-tabs">
       <button class="tab on" data-tab="methods">Methods</button>
       <button class="tab" data-tab="table">Times table</button>
+      <button class="tab" data-tab="benchmarks">Benchmarks</button>
     </div>
     <button class="close" id="btn-close-drawer" aria-label="Close">✕</button>
   </div>
   <div class="drawer-body" id="drawer-body"></div>
 </aside>
- 
+
 <script>
 "use strict";
  
@@ -340,7 +354,7 @@ const Store = (() => {
     del(key){ try{ live ? localStorage.removeItem(key) : delete mem[key]; }catch(e){ delete mem[key]; } }
   };
 })();
-const K = { set:"summatic.v2.settings", ses:"summatic.v2.sessions", tag:"summatic.v2.tagstats" };
+const K = { set:"summatic.v2.settings", ses:"summatic.v2.sessions", tag:"summatic.v2.tagstats", digits:"summatic:digits" };
  
 /* ══ METHODS ══════════════════════════════════════════ */
 const METHODS = [
@@ -410,10 +424,8 @@ const TAGS = {
   div_2s:["Dividing by 2, 4, 8","revmul"], div_5s:["Dividing by 5, 10, 25","scaledv"],
   div_3s:["Dividing by 3, 6, 9","revmul"], div_7:["Dividing by 7","revmul"],
   div_11:["Dividing by 11","revmul"], div_other:["Dividing by awkward numbers","revmul"],
-  pct_of:["Percent of a number","pctflip"], pct_what:["What percent is x of y","fracfirst"],
-  pct_change:["Percent change","pctchange"], pct_apply:["Applying an increase or cut","pctflip"],
-  dec_mul:["Decimal multiplication","digitcount"], dec_div:["Decimal division","scaledv"],
-  dec_frac:["Fraction to decimal","fracfirst"], dec_pct:["Fraction to percent","fracfirst"]
+  pct_of:["Percent of a number","pctflip"],
+  dec_mul:["Decimal multiplication","digitcount"], dec_div:["Decimal division","scaledv"]
 };
 /* ══ GENERATION ═══════════════════════════════════════
    No difficulty settings by design. Each family samples
@@ -430,27 +442,23 @@ function hasCarry(a,b){ while(a>0||b>0){ if((a%10)+(b%10)>9) return true;
 function hasBorrow(a,b){ while(b>0){ if((a%10)<(b%10)) return true;
   a=Math.floor(a/10); b=Math.floor(b/10);} return false; }
  
-function genAdd(){
-  const t=Math.random(); let a,b;
-  if (t<.55)      { a=rnd(11,99);   b=rnd(11,99); }
-  else if (t<.85) { a=rnd(101,999); b=rnd(11,99); }
-  else            { a=rnd(101,999); b=rnd(101,999); }
+function digitRange(d){ return d===1 ? [2,9] : d===2 ? [10,99] : [100,999]; }
+/* Level 3 (max) opens the field up instead of locking both operands to a
+   fixed 3-digit length — each operand independently mixes across 1–3
+   digits, echoing the original full-range philosophy at the top tier. */
+function pickDigitLen(level){ return level===3 ? rnd(1,3) : level; }
+function genAdd(level){
+  const [lo1,hi1]=digitRange(pickDigitLen(level)), [lo2,hi2]=digitRange(pickDigitLen(level));
+  const a=rnd(lo1,hi1), b=rnd(lo2,hi2);
   return { cat:"add", tag:hasCarry(a,b)?"add_carry":"add_plain",
            text:`${a} <span class="op">+</span> ${b}`, answer:a+b };
 }
-function genSub(){
-  if (Math.random()<.22){
-    const base=pick([1000,1000,2000,5000,10000]);
-    const b=rnd(Math.floor(base*.12), base-1);
-    return { cat:"sub", tag:"sub_comp",
-             text:`${base} <span class="op">−</span> ${b}`, answer:base-b };
-  }
-  const t=Math.random(); let a,b;
-  if (t<.6) { a=rnd(11,99);   b=rnd(11,99); }
-  else      { a=rnd(101,899); b=rnd(11,99); }
-  const hi=a+b;
-  return { cat:"sub", tag:hasBorrow(hi,b)?"sub_borrow":"sub_plain",
-           text:`${hi} <span class="op">−</span> ${b}`, answer:a };
+function genSub(level){
+  const [lo1,hi1]=digitRange(pickDigitLen(level)), [lo2,hi2]=digitRange(pickDigitLen(level));
+  const x=rnd(lo1,hi1), y=rnd(lo2,hi2);
+  const hi=Math.max(x,y), lo=Math.min(x,y);
+  return { cat:"sub", tag:hasBorrow(hi,lo)?"sub_borrow":"sub_plain",
+           text:`${hi} <span class="op">−</span> ${lo}`, answer:hi-lo };
 }
 function mulTag(a,b){
   const da=digits(a), db=digits(b);
@@ -466,21 +474,9 @@ function mulTag(a,b){
   if (da>=2 && db>=2) return "mul_2x2";
   return "mul_2x1";
 }
-function genMul(){
-  let a,b; const t=Math.random();
-  if (t<.34){
-    switch (pick(["dos","x11","x5","x9","factor"])){
-      case "dos":{ const mid=pick([15,20,25,30,35,40,45,50,50,60,70,80,90,100]);
-                   const d=rnd(1,Math.min(7,mid-2)); a=mid-d; b=mid+d; break; }
-      case "x11":  a=11; b=rnd(12,99); break;
-      case "x5":   a=pick([5,25,25,125,50]); b=rnd(12,96); break;
-      case "x9":   a=pick([9,99]); b=rnd(12,88); break;
-      default:     a=pick([14,16,18,22,24,28,32,35,45,55,65,75]);
-                   b=pick([15,25,35,45,55,65,75,85]);
-    }
-    if (Math.random()<.5){ const s=a; a=b; b=s; }
-  } else if (t<.7){ a=rnd(2,12); b=rnd(13,99); if(Math.random()<.5){const s=a;a=b;b=s;} }
-  else            { a=rnd(12,99); b=rnd(12,99); }
+function genMul(level){
+  const [lo1,hi1]=digitRange(pickDigitLen(level)), [lo2,hi2]=digitRange(pickDigitLen(level));
+  const a=rnd(lo1,hi1), b=rnd(lo2,hi2);
   return { cat:"mul", tag:mulTag(a,b),
            text:`${a} <span class="op">×</span> ${b}`, answer:a*b };
 }
@@ -492,68 +488,39 @@ function divTag(d){
   if ([11,12,22,33].includes(d))       return "div_11";
   return "div_other";
 }
-function genDiv(){
-  const t=Math.random(); let d,q;
-  if (t<.55)     { d=rnd(2,12);  q=rnd(3,99); }
-  else if (t<.8) { d=rnd(13,25); q=rnd(3,40); }
-  else           { d=pick([5,11,25,50,15,7]); q=rnd(4,80); }
-  return { cat:"div", tag:divTag(d),
-           text:`${d*q} <span class="op">÷</span> ${d}`, answer:q };
+function genDiv(level){
+  const [lo1,hi1]=digitRange(pickDigitLen(level)), [lo2,hi2]=digitRange(pickDigitLen(level));
+  const divisor=rnd(lo1,hi1), quotient=rnd(lo2,hi2);
+  return { cat:"div", tag:divTag(divisor),
+           text:`${divisor*quotient} <span class="op">÷</span> ${divisor}`, answer:quotient };
 }
-const NICE_PCT=[1,2,4,5,8,10,12,15,16,20,25,30,32,35,40,45,50,60,64,72,75,80,90,120,125,150];
-const NICE_BASE=[20,24,25,30,32,36,40,44,48,50,60,64,70,75,80,84,90,96,100,120,125,150,160,200,240,250,300,400,500];
-function genPct(){
-  switch (pick(["of","of","what","change","apply"])){
-    case "of":
-      for (let i=0;i<40;i++){ const p=pick(NICE_PCT), n=pick(NICE_BASE), v=p*n/100;
-        if (Number.isInteger(v)&&v>0) return { cat:"pct", tag:"pct_of",
-          text:`${p}% <span class="op">of</span> ${n}`, answer:v }; }
-      break;
-    case "what":{
-      const whole=pick([20,25,40,50,60,64,80,100,120,125,160,200,250]);
-      const f=pick([.05,.1,.125,.2,.25,.375,.4,.5,.6,.625,.75,.8,.875]);
-      const part=whole*f;
-      if (Number.isInteger(part)) return { cat:"pct", tag:"pct_what",
-        text:`${part} <span class="op">is what % of</span> ${whole}`,
-        answer:round(f*100,2), unit:"%" };
-      break; }
-    case "change":{
-      const from=pick([20,25,40,50,60,80,100,120,125,150,200,250]);
-      const to=from*pick([.5,.75,.8,.9,1.1,1.2,1.25,1.5,1.6,2]);
-      if (Number.isInteger(to)) return { cat:"pct", tag:"pct_change",
-        text:`${from} <span class="op">→</span> ${to}<small>percent change</small>`,
-        answer:round((to-from)/from*100,2), unit:"%" };
-      break; }
-    default:{
-      const base=pick(NICE_BASE), p=pick([5,10,15,20,25,30,40,50,60,75]);
-      const up=Math.random()<.5, v=up?base*(1+p/100):base*(1-p/100);
-      if (Number.isInteger(v)) return { cat:"pct", tag:"pct_apply",
-        text:`${base} <span class="op">${up?"+":"−"}</span> ${p}%`, answer:v };
-    }
-  }
-  return { cat:"pct", tag:"pct_of", text:`25% <span class="op">of</span> 84`, answer:21 };
+/* Percents & decimals have no operand-digit-length concept, so their two
+   levels tier magnitude/range instead. Percent is built the way Zetamac
+   does it: percent always a multiple of 5, base always a multiple of 20,
+   so the product is guaranteed clean without any retry/filter loop —
+   that also means the pool is a full range, not a short fixed list, so
+   it doesn't repeat nearly as fast as a small curated array would. */
+function genPct(level){
+  const p=rnd(1, level>=2?19:10)*5;
+  const n=rnd(1, level>=2?20:10)*20;
+  return { cat:"pct", tag:"pct_of",
+           text:`${n} <span class="op">×</span> ${p}%`, answer:p*n/100 };
 }
-const FRACS=[[1,2],[1,4],[3,4],[1,5],[2,5],[3,5],[4,5],[1,8],[3,8],[5,8],[7,8],
-             [1,16],[1,20],[1,25],[3,20],[7,20],[1,32],[1,10],[3,10],[9,10],[1,40]];
-function genDec(){
-  const kind=pick(["mul","mul","div","frac","pct"]);
-  if (kind==="mul"){
-    const a=pick([.2,.25,.4,.5,.6,.75,.8,1.2,1.5,2.5,.05,.125,1.25,3.5]);
-    const b=pick([4,6,8,12,16,20,24,25,32,40,48,60,64,80,100,120,200,240]);
+function genDec(level){
+  if (pick(["mul","div"])==="mul"){
+    const a=level>=2?pick([.2,.25,.4,.5,.6,.75,.8,1.2,1.5,2.5,.05,.125,1.25,3.5])
+                    :pick([.25,.5,.75,1.25,1.5,1.75,2.25,2.5]);
+    const b=level>=2?pick([4,6,8,12,16,20,24,25,32,40,48,60,64,80,100,120,200,240])
+                    :pick([4,6,8,10,12,16,20,25,40,50,80,100]);
     return { cat:"dec", tag:"dec_mul",
-             text:`${a} <span class="op">×</span> ${b}`, answer:round(a*b,3) };
+             text:`${b} <span class="op">×</span> ${a}`, answer:round(a*b,3) };
   }
-  if (kind==="div"){
-    const d=pick([.2,.25,.4,.5,.8,1.25,2.5,.05,.125]);
-    const q=pick([4,6,8,12,15,16,20,24,25,30,36,40,48,60,80]);
-    return { cat:"dec", tag:"dec_div",
-             text:`${round(d*q,4)} <span class="op">÷</span> ${d}`, answer:q };
-  }
-  const [n,d]=pick(FRACS);
-  if (kind==="frac") return { cat:"dec", tag:"dec_frac",
-    text:`${n}/${d}<small>as a decimal</small>`, answer:round(n/d,5) };
-  return { cat:"dec", tag:"dec_pct",
-    text:`${n}/${d}<small>as a percent</small>`, answer:round(n/d*100,4), unit:"%" };
+  const d=level>=2?pick([.2,.25,.4,.5,.8,1.25,2.5,.05,.125])
+                  :pick([.2,.25,.4,.5,.75,.8,1.25,1.5,2.5]);
+  const q=level>=2?pick([4,6,8,12,15,16,20,24,25,30,36,40,48,60,80])
+                  :pick([4,6,8,10,12,15,16,20,24,30,40,50]);
+  return { cat:"dec", tag:"dec_div",
+           text:`${round(d*q,4)} <span class="op">÷</span> ${d}`, answer:q };
 }
  
 const GROUPS = [
@@ -562,13 +529,40 @@ const GROUPS = [
   ["pd","% ·","Percents & decimals",       ["pct","dec"]]
 ];
 const GEN = { add:genAdd, sub:genSub, mul:genMul, div:genDiv, pct:genPct, dec:genDec };
- 
+const CAT_MODE = { add:"as", sub:"as", mul:"md", div:"md", pct:"pd", dec:"pd" };
+
+/* ══ DIGIT-LENGTH CONFIG ══════════════════════════════
+   One shared difficulty level per mode, set inline via dots
+   below the chip once that mode is selected. Addition/subtraction
+   and multiplication/division go to 3 (level 3 mixes 1–3 digits
+   per operand, see pickDigitLen); percents/decimals top out at 2
+   since there's no 3-digit operand concept there — level tiers the
+   number pools instead. Persisted separately from S under K.digits
+   so a corrupt/missing entry can never break the rest of the app.
+   ═════════════════════════════════════════════════════ */
+const DIGIT_DEFAULTS = { as:2, md:2, pd:2 };
+const DIGIT_MAX = { as:3, md:3, pd:2 };
+function loadDigits(){
+  const raw = Store.get(K.digits, {});
+  const out = {};
+  for (const mode of Object.keys(DIGIT_DEFAULTS)){
+    const v = raw ? raw[mode] : undefined;
+    const max = DIGIT_MAX[mode];
+    out[mode] = (Number.isInteger(v) && v>=1 && v<=max) ? v : DIGIT_DEFAULTS[mode];
+  }
+  return out;
+}
+let DIGITS = loadDigits();
+const saveDigits = () => Store.set(K.digits, DIGITS);
+
 function generate(){
   const cats=[];
   for (const [key,,,list] of GROUPS) if (S.groups[key]) cats.push(...list);
-  return GEN[pick(cats.length ? cats : ["add"])]();
+  const cat = pick(cats.length ? cats : ["add"]);
+  const level = DIGITS[CAT_MODE[cat]];
+  return level ? GEN[cat](level) : GEN[cat]();
 }
- 
+
 /* ══ STATE ════════════════════════════════════════════ */
 const DEFAULTS = { groups:{ as:true, md:true, pd:false }, duration:120 };
 let S = Object.assign({}, DEFAULTS, Store.get(K.set,{}));
@@ -606,17 +600,40 @@ function drawRibbon(node, log){
 }
  
 /* ══ SETUP UI ═════════════════════════════════════════ */
+function toggleGroup(key){
+  const on=Object.keys(S.groups).filter(k=>S.groups[k]);
+  if (S.groups[key] && on.length===1) return;
+  S.groups[key]=!S.groups[key]; save(); renderSetup();
+}
+function renderHashRow(container, mode, label){
+  container.innerHTML="";
+  const level=DIGITS[mode], max=DIGIT_MAX[mode];
+  for (let i=1;i<=max;i++){
+    const b=el("button","hash-btn");
+    b.classList.toggle("active", i<=level);
+    b.setAttribute("aria-pressed", String(i<=level));
+    const mixed = mode!=="pd" && i===max ? " (mixed, hardest)" : "";
+    b.setAttribute("aria-label", `${label}: digit level ${i} of ${max}${mixed}`);
+    b.onclick=(e)=>{ e.stopPropagation(); DIGITS[mode]=i; saveDigits(); renderHashRow(container,mode,label); };
+    container.appendChild(b);
+  }
+}
 function renderSetup(){
   const g=$("groups"); g.innerHTML="";
   GROUPS.forEach(([key,glyph,label])=>{
-    const b=el("button","gchip",`<span class="glyph">${glyph}</span><b>${label}</b>`);
-    b.setAttribute("aria-pressed", String(!!S.groups[key]));
-    b.onclick=()=>{
-      const on=Object.keys(S.groups).filter(k=>S.groups[k]);
-      if (S.groups[key] && on.length===1) return;
-      S.groups[key]=!S.groups[key]; save(); renderSetup();
-    };
-    g.appendChild(b);
+    const col=el("div","gcol");
+    const chip=el("button","gchip",`<span class="glyph">${glyph}</span><b>${label}</b>`);
+    chip.setAttribute("aria-pressed", String(!!S.groups[key]));
+    chip.onclick=()=>toggleGroup(key);
+    col.appendChild(chip);
+    if (S.groups[key]){
+      const hashes=el("div","hash-row");
+      hashes.setAttribute("role","group");
+      hashes.setAttribute("aria-label", `Digit length for ${label}`);
+      col.appendChild(hashes);
+      renderHashRow(hashes, key, label);
+    }
+    g.appendChild(col);
   });
   $("dur").value=S.duration;
   $("time-read").innerHTML=`${fmt(S.duration)}<span>time length</span>`;
@@ -626,19 +643,18 @@ $("dur").addEventListener("input",e=>{
   $("time-read").innerHTML=`${fmt(S.duration)}<span>time length</span>`;
 });
 $("dur").addEventListener("change",save);
- 
+
 function show(which){
   ["s-setup","s-drill","s-results"].forEach(id=>$(id).classList.toggle("on",id===which));
   window.scrollTo(0,0);
 }
- 
+
 /* ══ DRILL ════════════════════════════════════════════ */
 function startDrill(){
   run={ started:Date.now(), endsAt:performance.now()+S.duration*1000,
-        log:[], right:0, wrong:0, qStart:0, current:null, streak:0, best:0 };
-  $("t-right").textContent="0"; $("t-wrong").textContent="0";
-  $("t-streak").textContent="0"; $("streak-wrap").classList.remove("pop");
-  $("ribbon").innerHTML=""; $("flash").textContent="";
+        log:[], right:0, wrong:0, score:0, qStart:0, current:null };
+  $("t-score").textContent="0";
+  $("flash").textContent="";
   show("s-drill");
   nextProblem();
   $("answer").value=""; $("answer").focus();
@@ -660,17 +676,11 @@ function submit(ok){
   const lat=(performance.now()-run.qStart)/1000, p=run.current;
   run.log.push({ ok, lat, tag:p.tag, cat:p.cat });
   ok ? run.right++ : run.wrong++;
-  $("t-right").textContent=String(run.right);
-  $("t-wrong").textContent=String(run.wrong);
-  $("ribbon").appendChild(barFor({ok,lat}));
   if (ok){
-    run.streak++; run.best=Math.max(run.best,run.streak);
-    $("t-streak").textContent=String(run.streak);
-    if (run.streak>0 && run.streak%5===0){
-      const w=$("streak-wrap"); w.classList.remove("pop"); void w.offsetWidth; w.classList.add("pop");
-    }
-  } else {
-    run.streak=0; $("t-streak").textContent="0";
+    const bonus=lat<1.0, pts=100+(bonus?50:0);
+    run.score+=pts;
+    $("t-score").textContent=String(run.score);
+    if (bonus) showBonusPop();
   }
   const stats=Store.get(K.tag,{}), s=stats[p.tag]||{n:0,sum:0,miss:0};
   s.n++; s.sum+=Math.min(lat,20); if(!ok) s.miss++;
@@ -678,6 +688,12 @@ function submit(ok){
   if (!ok){ $("flash").textContent=`${p.answer}${p.unit||""}`;
     setTimeout(()=>{ $("flash").textContent=""; },900); }
   nextProblem();
+}
+function showBonusPop(){
+  const b=$("bonus-pop");
+  b.classList.remove("show"); void b.offsetWidth; b.classList.add("show");
+  clearTimeout(showBonusPop._t);
+  showBonusPop._t=setTimeout(()=>b.classList.remove("show"),700);
 }
 $("answer").addEventListener("input",()=>{
   if (!run) return;
@@ -717,12 +733,12 @@ function finish(){
   const log=run.log, lats=log.filter(e=>e.ok).map(e=>e.lat);
   const acc=log.length ? run.right/log.length : 0;
   const sessions=Store.get(K.ses,[]);
-  sessions.push({ t:run.started, dur:S.duration, score:run.right,
+  sessions.push({ t:run.started, dur:S.duration, score:run.score,
     right:run.right, wrong:run.wrong, p50:round(median(lats),2), acc:round(acc,3),
     groups:Object.keys(S.groups).filter(k=>S.groups[k]) });
   Store.set(K.ses, sessions.slice(-80));
- 
-  $("r-score").textContent=String(run.right);
+
+  $("r-score").textContent=String(run.score);
   $("r-acc").textContent=log.length ? Math.round(acc*100)+"%" : "—";
   $("r-p50").textContent=lats.length ? median(lats).toFixed(1)+"s" : "—";
 
@@ -816,6 +832,16 @@ $("drawer-body").innerHTML = `
   <div class="panel" id="panel-table">
     <div class="panel-eyebrow">1–20 × 1–20 · squares highlighted</div>
     ${buildMultTable()}
+  </div>
+  <div class="panel" id="panel-benchmarks">
+    <table class="table">
+      <tr><th>Tier</th><th>Correct in 120s</th><th>Avg per problem</th><th>Score</th></tr>
+      <tr><td class="lbl">Beginner</td><td>20–35</td><td>3.5–6.0s</td><td>~2,000–3,500</td></tr>
+      <tr><td class="lbl">Intermediate</td><td>35–55</td><td>2.2–3.4s</td><td>~3,500–5,500</td></tr>
+      <tr><td class="lbl">Impressive</td><td>55–75</td><td>1.6–2.2s</td><td>~5,500–8,000</td></tr>
+      <tr><td class="lbl">Interview ready</td><td>75+</td><td>under 1.6s</td><td>8,000+</td></tr>
+    </table>
+    <p class="drawer-note">Calibrated to a 120-second session on default difficulty. Numbers are a reference point, not a verdict — 3×3 multiplication targets will be far lower than 1-digit addition.</p>
   </div>`;
 
 document.querySelectorAll("#drawer-tabs .tab").forEach(btn=>{
@@ -826,11 +852,12 @@ document.querySelectorAll("#drawer-tabs .tab").forEach(btn=>{
   };
 });
 
-function openDrawer(id){
+function openDrawer(id, tab){
+  const targetTab = tab || "methods";
   $("drawer").classList.add("on"); $("drawer").setAttribute("aria-hidden","false");
   $("scrim").classList.add("on");
-  document.querySelectorAll("#drawer-tabs .tab").forEach(b=>b.classList.toggle("on", b.dataset.tab==="methods"));
-  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on", p.id==="panel-methods"));
+  document.querySelectorAll("#drawer-tabs .tab").forEach(b=>b.classList.toggle("on", b.dataset.tab===targetTab));
+  document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("on", p.id==="panel-"+targetTab));
   document.querySelectorAll(".method.lit").forEach(n=>n.classList.remove("lit"));
   if (id){ const n=$("m-"+id);
     if (n){ n.classList.add("lit");
@@ -844,7 +871,8 @@ function closeDrawer(){
 document.addEventListener("click",e=>{
   const t=e.target.closest("[data-m]"); if (t) openDrawer(t.dataset.m);
 });
-$("btn-methods").onclick=()=>openDrawer(null);
+$("btn-methods").onclick=()=>openDrawer(null,"methods");
+$("btn-benchmarks").onclick=()=>openDrawer(null,"benchmarks");
 $("btn-close-drawer").onclick=closeDrawer;
 $("scrim").onclick=closeDrawer;
 document.addEventListener("keydown",e=>{
